@@ -1,59 +1,98 @@
-import { makeScene2D, Rect, Layout, Node, Length, Circle, Txt } from "@motion-canvas/2d";
-import { all, waitFor, makeRef, range, SignalValue, createSignal } from "@motion-canvas/core";
+import { makeScene2D, Rect, Layout, Node, Length, Circle, Txt } from '@motion-canvas/2d';
+import { all, waitFor, makeRef, range, SignalValue, createSignal } from '@motion-canvas/core';
+import { data } from '../data';
 
 export default makeScene2D(function* (view) {
-  const MyRect = (height:number) => <Rect height={height + 50} width={225} lineWidth={5} stroke={"#88C0D0"} radius={rad}>
-    <Layout direction={"column"} width={225} height={height+50} gap={0}  layout>
-      <Rect height={50} fill={"#88C0D0"} alignItems={'center'} justifyContent={'center'}><Txt fontSize={30} fill={'white'} >0-0</Txt></Rect>
-      <Layout direction={"column"} width={225} height={height} gap={10} justifyContent={'center'} paddingTop={10} paddingBottom={10} layout>
-        {range(height / 100).map((x) => <Layout direction={"row"} height={100} gap={20} alignItems={'center'} justifyContent={'center'} layout>
-          <Circle width={50} height={50} lineWidth={5} stroke={"#88C0D0"} alignItems={'center'} justifyContent={'center'}><Txt fontSize={20} fill={"#88C0D0"}>A</Txt></Circle>
-          <Txt fontSize={30} fill={"#88C0D0"}>VS</Txt>
-          <Circle width={50} height={50} lineWidth={5} stroke={"#88C0D0" } alignItems={'center'} justifyContent={'center'}><Txt fontSize={20} fill={"#88C0D0"}>B</Txt></Circle>
-        </Layout>)}
+    const rects: Rect[] = [];
+    const strokeColor = (isQualify: Boolean) => (isQualify ? '#ffffff00' : '#88C0D0');
+    const fillColor = (isQualify: Boolean) => (isQualify ? '#88C0D0' : '#88c0d000');
+    const textColor = (isQualify: Boolean) => (isQualify ? '#ffffff' : '#88C0D0');
+
+    const Pair = (team1: string, team2: string) => (
+        <Layout direction={'row'} height={100} gap={20} alignItems={'center'} justifyContent={'center'} layout>
+            <Circle width={50} height={50} lineWidth={5} fill={fillColor(false)} stroke={strokeColor(false)} alignItems={'center'} justifyContent={'center'}>
+                <Txt fontSize={20} fill={textColor(false)}>
+                    {team1}
+                </Txt>
+            </Circle>
+            <Txt fontSize={30} fill={'#88C0D0'}>
+                VS
+            </Txt>
+            <Circle width={50} height={50} lineWidth={5} stroke={'#88C0D0'} alignItems={'center'} justifyContent={'center'}>
+                <Txt fontSize={20} fill={'#88C0D0'}>
+                    {team2}
+                </Txt>
+            </Circle>
         </Layout>
-    </Layout>
-    </Rect>;
-  const rects: Rect[] = [];
-  const rad = 5;
-  const gapVertical = 15;
-  view.add(
-    <Layout direction={"row"} width={1820} height={800} gap={60} justifyContent={'center'} layout>
-      <Layout direction={"column"} width={225} height={800} gap={gapVertical} justifyContent={'center'} layout>
-          <Rect height={200} fill={"#88C0D0"}></Rect>
-          {MyRect(800)}
-      </Layout>
-      <Layout direction={"column"} width={225} height={800} gap={gapVertical} justifyContent={'center'} layout>
-          {MyRect(400)}
-          {MyRect(400)}
-      </Layout>
-      <Layout direction={"column"} width={225} height={800} gap={gapVertical} justifyContent={'center'} layout>
-          {MyRect(200)}
-          {MyRect(400)}
-          {MyRect(200)}
-      </Layout>
-      <Layout direction={"column"} width={225} height={800} gap={gapVertical} justifyContent={'center'} layout>
-        {MyRect(100)}
-        {MyRect(300)}
-        {MyRect(300)}
-        {MyRect(100)}
-      </Layout>
-      <Layout direction={"column"} width={225} height={800} gap={gapVertical} justifyContent={'center'} layout>
-      {MyRect(100)}
-          {MyRect(300)}
-          {MyRect(100)}
-      </Layout>
-      <Layout direction={"column"} width={225} height={800} gap={gapVertical} justifyContent={'center'} layout>
-        {MyRect(100)}
-        {MyRect(100)}
-      </Layout>
-    </Layout>
-  );
+    );
 
-  yield* waitFor(1);
+    const Group = (team: number, score: string, height: number) => (teamPair: { team1: string; team2: string }[]) =>
+        (
+            <Rect height={height} width={500} lineWidth={5} stroke={'#88C0D0'} radius={rad}>
+                <Layout direction={'column'} width={500} height={height} gap={0} layout>
+                    <Rect height={50} fill={'#88C0D0'} alignItems={'center'} justifyContent={'center'}>
+                        <Txt fontSize={30} fill={'white'}>
+                            {score}
+                        </Txt>
+                    </Rect>
+                    <Layout direction={'column'} height={height - 50} gap={10} justifyContent={'center'} alignItems={'center'} layout>
+                        {range(team).map((x) => Pair(teamPair[x].team1, teamPair[x].team2))}
+                    </Layout>
+                </Layout>
+            </Rect>
+        );
 
-  // Animate them
-  yield* all(
-    ...rects.map((rect) => rect.position.y(100, 1).to(-100, 2).to(0, 1))
-  );
+    const Round = (groups: { size: number; score: string }[], height: number = 1000) => {
+        const teamCount = groups.reduce((p, c) => (p = p + c.size), 0);
+        const heightWithoutGap = height - 15 * (groups.length - 1);
+        return (
+            <Layout direction={'column'} width={500} height={1000} gap={gapVertical} justifyContent={'center'} layout>
+                {groups.map((i) => Group(i.size, i.score, (heightWithoutGap * i.size) / teamCount)(data.find((x) => x.score === i.score).pairs))}
+            </Layout>
+        );
+    };
+
+    const rad = 5;
+    const gapVertical = 15;
+    view.add(
+        <Layout direction={'row'} width={1820} height={1200} gap={20} justifyContent={'center'} alignItems={'center'} layout>
+            {Round([{ size: 8, score: '0-0' }])}
+            {Round([
+                { size: 4, score: '1-0' },
+                { size: 4, score: '0-1' },
+            ])}
+            {Round([
+                { size: 2, score: '2-0' },
+                { size: 4, score: '1-1' },
+                { size: 2, score: '0-2' },
+            ])}
+            {/*                 {ColumnSet([
+                    { size: 1, score: '3-0' },
+                    { size: 3, score: '2-1' },
+                    { size: 3, score: '1-2' },
+                    { size: 1, score: '0-3' },
+                ])} */}
+            {/*                 {ColumnSet(
+                    [
+                        { size: 1, score: '3-1' },
+                        { size: 3, score: '2-2' },
+                        { size: 1, score: '1-3' },
+                    ],
+                    730,
+                )} */}
+
+            {/*                 {ColumnSet(
+                    [
+                        { size: 1, score: '3-2' },
+                        { size: 1, score: '2-3' },
+                    ],
+                    420,
+                )} */}
+        </Layout>,
+    );
+
+    yield* waitFor(1);
+
+    // Animate them
+    yield* all(...rects.map((rect) => rect.position.y(100, 1).to(-100, 2).to(0, 1)));
 });
